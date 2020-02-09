@@ -1,3 +1,4 @@
 *.class
 /ir_model
 *.json
+relevance
