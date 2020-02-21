@@ -144,6 +144,12 @@ public class IR_model3
     try{
       JSONArray items = results.getJSONArray("items");
 
+      //terminate program if less than 10 results
+      if (items.length()<10){
+        System.out.println("Less than 10 results returned. End");
+        System.exit(1);
+      }
+
       //creating vocabulary list and filling in count matrix
       for (int i=0; i<items.length(); i++){
         Map<String,Integer> term_frequencies = new HashMap<String, Integer>();
@@ -291,6 +297,11 @@ public class IR_model3
 
           }
           precision = relevant_count/10.0;
+          //stop program if precision is 0
+          if (precision == 0.0){
+            System.out.println("Precision is 0. End");
+            System.exit(1);
+          }
 
       }catch(Exception e){
           e.printStackTrace();
