@@ -62,10 +62,12 @@ public class IR_model
       System.out.println(query);
 
       JSONObject results = getSearchResults(api_Key,engine_ID,query);
-      generateFrequencyMatrices(results);
+      generateFrequencyMatrices(query,results);
+      //System.out.println(df_matrix);
 
       vectorizeDocuments(results);
       vectorizeQuery(query);
+
 
       Map<ArrayList,Double> precision_indices = getPrecision(results);
       ArrayList rel_doc_indices =  new ArrayList<Integer>();
@@ -140,10 +142,11 @@ public class IR_model
   }
 
 
-  public static void generateFrequencyMatrices(JSONObject results){
+  public static void generateFrequencyMatrices(String query, JSONObject results){
     try{
       JSONArray items = results.getJSONArray("items");
-
+      Set<String> query_w = new HashSet<String>(Arrays.asList(query.replaceAll("[^a-zA-Z ]", "").toLowerCase().split("\\s+")));
+      //String[] query_w = query.replaceAll("[^a-zA-Z ]", "").toLowerCase().split("\\s+");
       //terminate program if less than 10 results
       if (items.length()<10){
         System.out.println("Less than 10 results returned. End");
@@ -161,7 +164,7 @@ public class IR_model
           summary = (String) item.get("snippet");
           words = summary.replaceAll("[^a-zA-Z ]", "").toLowerCase().split("\\s+");
           for(String word : words){
-            if(!stopwords.contains(word)){
+            if(!stopwords.contains(word) || query_w.contains(word)){
               filtered_words.add(word);
             }
           }
@@ -202,7 +205,7 @@ public class IR_model
 
   public static void vectorizeDocuments(JSONObject results){
     JSONArray items = results.getJSONArray("items");
-    printResult(items, 0);
+    //printResult(items, 0);
     for (int i=0;i<items.length(); i++){ //iterating through docs
       Map<String,Double> term_tf_idf = new HashMap<String, Double>();
       Double denom = norm_term(i);
