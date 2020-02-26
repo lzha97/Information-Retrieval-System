@@ -397,7 +397,7 @@ public class IR_model
     //add words from current query to hashmap.
     int num = query_words_list.length;
       for (int i=0; i<num; i++){
-        String w = query_words_list[i];
+        String w = query_words_list[i].replaceAll("[^a-zA-Z0-9 ]", "").toLowerCase();
         query_tokens.add(w);
       }
 
