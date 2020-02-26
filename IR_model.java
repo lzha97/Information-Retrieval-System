@@ -202,6 +202,7 @@ public class IR_model
 
   public static void vectorizeDocuments(JSONObject results){
     JSONArray items = results.getJSONArray("items");
+    printResult(items, 0);
     for (int i=0;i<items.length(); i++){ //iterating through docs
       Map<String,Double> term_tf_idf = new HashMap<String, Double>();
       Double denom = norm_term(i);
