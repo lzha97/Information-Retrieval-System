@@ -14,7 +14,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Scanner;
 
-public class IR_model3
+public class IR_model
 {
   //Count Matrix: rows are documents, cols are words in collection, entries are
   //term frequency.
@@ -86,7 +86,7 @@ public class IR_model3
 
       //retrieve new words based on reweighted query vector, reorder query terms
       String new_query = deriveNewWords(query,new_query_vector);
-      System.out.println(new_query);
+      //System.out.println(new_query);
       query = new_query;
   }
 
@@ -202,7 +202,6 @@ public class IR_model3
 
   public static void vectorizeDocuments(JSONObject results){
     JSONArray items = results.getJSONArray("items");
-    printResult(items,0);
     for (int i=0;i<items.length(); i++){ //iterating through docs
       Map<String,Double> term_tf_idf = new HashMap<String, Double>();
       Double denom = norm_term(i);
@@ -336,14 +335,14 @@ public class IR_model3
 
   //calculates new query vector using Rocchio's.
   public static Map<String,Double> calculateNewQuery(ArrayList rel_indices){
-    System.out.println(rel_indices);
+    //System.out.println(rel_indices);
     ArrayList irrel_indices = new ArrayList<Integer>();
     for (int i = 0; i<10; i++){
       if (!rel_indices.contains(i)){
         irrel_indices.add(i);
       }
     }
-    System.out.println(irrel_indices);
+    //System.out.println(irrel_indices);
 
     Double alpha = 1.0;
     Double beta = 1.0;
