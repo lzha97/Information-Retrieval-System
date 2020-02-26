@@ -220,7 +220,9 @@ public class IR_model
 
 
   public static void vectorizeQuery(String query){
-    String[] query_words = query.split(" ");
+    String lw_query = query.replaceAll("[^a-zA-Z0-9 ]", "").toLowerCase();
+    //System.out.println(lw_query);
+    String[] query_words = lw_query.split(" ");
     Map<String,Integer> word_count = new HashMap<String, Integer>();
     Double sum = 0.0;
     for (String w1 : query_words){
