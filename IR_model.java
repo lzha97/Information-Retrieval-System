@@ -44,15 +44,19 @@ public class IR_model
     System.out.println("Enter a precision: ");
     Double precision = scan.nextDouble();
 
-    String engine_ID = System.getenv("G_ENGINE_ID");
-    String api_Key = System.getenv("G_API_KEY");
+    //String engine_ID = System.getenv("G_ENGINE_ID");
+    //String api_Key = System.getenv("G_API_KEY");
 
     stopwords = getStopWords("proj1-stop.txt");
 
-    if(args.length > 0){ engine_ID = args[0]; }
-    if(args.length > 1){ api_Key = args[1]; }
-    if(args.length > 2){ precision = Double.parseDouble(args[2]); }
-    if(args.length > 3){ query = args[3]; }
+    if(args.length < 2){
+      System.out.println("Not enough arguments!");
+      System.exit(1);
+    }
+    String engine_ID = args[1];
+    String api_Key = args[0]; 
+    //if(args.length > 2){ precision = Double.parseDouble(args[2]); }
+    //if(args.length > 3){ query = args[3]; }
 
     System.out.println("\nParameters:\nClient key  = " + api_Key+"\nEngine key  = " + engine_ID + "\nQuery       = "
                         + query + "\nPrecision   = "+ precision + "\nGoogle Search Results:\n======================\n");
@@ -384,12 +388,14 @@ public class IR_model
   //Get the weights with topmost frequency add them to query.
   public static String deriveNewWords(String query, Map<String,Double> query_vector){
     String[] query_words_list = query.split(" ");
-    List<String> query_words = new ArrayList<String>();
+    Map<String,Double> query_words = new HashMap<String, Double>();
+    //List<String> query_words = new ArrayList<String>();
     int num = query_words_list.length;
         for (int i=0; i<num; i++)
         {
             String w = query_words_list[i];
-            query_words.add(w);
+            //query_words.add(w);
+            query_words.put(w,query_vector.get(w.replaceAll("[^a-zA-Z0-9 ]", "").toLowerCase()));
         }
     System.out.println(query_words);
     Double highest = Double.MIN_VALUE;
@@ -398,27 +404,52 @@ public class IR_model
     String highest_word2 = null;
     for (String word: query_vector.keySet()){
       Double value = query_vector.get(word);
-      if (highest <= value && !query_words.contains(word)){
+      if (highest <= value && !query_words.containsKey(word)){
         highest2 = highest;
         highest_word2 = highest_word;
         highest = value;
         highest_word = word;
       }
-      else if (highest2 <= value && !query_words.contains(word)){
+      else if (highest2 <= value && !query_words.containsKey(word)){
         highest2 = value;
         highest_word2 = word;
       }
     }
-    query_words.add(highest_word);
-    query_words.add(highest_word2);
-    StringBuffer sb = new StringBuffer();
+    query_words.put(highest_word,highest);
+    //query_words.add(highest_word);
+    query_words.put(highest_word2,highest2);
+    //query_words.add(highest_word2);
 
-      for (String s : query_words) {
-         sb.append(s);
-         sb.append(" ");
+    query_words = sortByValue(query_words);
+    StringBuffer sb = new StringBuffer();
+      for (Map.Entry<String, Double> en : query_words.entrySet()) {
+        //System.out.println(en.getKey() + en.getValue());
+        sb.append(en.getKey());
+        sb.append(" ");
       }
-      String query_string = sb.toString();
+    String query_string = sb.toString();
     return query_string;
+  }
+
+
+  // function to sort hashmap by values. Taken from https://www.geeksforgeeks.org/sorting-a-hashmap-according-to-values/
+  public static HashMap<String, Double> sortByValue(Map<String, Double> hm){
+    // Create a list from elements of HashMap
+    List<Map.Entry<String, Double> > list = new LinkedList<Map.Entry<String, Double> >(hm.entrySet());
+
+    // Sort the list
+    Collections.sort(list, new Comparator<Map.Entry<String, Double> >() {
+      public int compare(Map.Entry<String, Double> o1, Map.Entry<String, Double> o2){
+        return (o1.getValue()).compareTo(o2.getValue());
+      }
+    });
+
+    // put data from sorted list to hashmap
+    HashMap<String, Double> temp = new LinkedHashMap<String, Double>();
+    for (Map.Entry<String, Double> aa : list) {
+      temp.put(aa.getKey(), aa.getValue());
+    }
+    return temp;
   }
 
 }
