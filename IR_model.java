@@ -389,6 +389,7 @@ public class IR_model
   }
 
 
+  //Get words with highest weights and add them to the query.
   public static String deriveNewWords(String query, Map<String,Double> query_vector){
     String[] query_words_list = query.split(" ");
     List<String> query_tokens = new ArrayList<String>();
