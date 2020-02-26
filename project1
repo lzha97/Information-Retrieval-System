@@ -1,0 +1,8 @@
+#!/bin/bash
+
+echo "---------Starting Program---------"
+echo
+echo "--------Compiling Java File-------"
+javac -classpath json-20140107.jar:. IR_model.java
+echo "----------Running Program---------"
+java -classpath json-20140107.jar:. IR_model $1 $2

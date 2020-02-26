@@ -332,6 +332,7 @@ public class IR_model
           title = item.get("title");
           item_url = item.get("link");
           summary = item.get("snippet");
+
       }catch(Exception e){}
 
       System.out.println("Result " + (i+1));
