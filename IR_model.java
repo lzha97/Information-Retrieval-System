@@ -16,23 +16,24 @@ import java.util.Scanner;
 
 public class IR_model
 {
-  //Count Matrix: rows are documents, cols are words in collection, entries are
-  //term frequency.
+  //Count Matrix: rows are documents, cols are words in collection, entries are term frequency.
   public static Map<Integer,Map<String, Integer>> count_matrix = new HashMap<Integer,Map<String, Integer>>();
 
   //Hashmap of (term : # of docs term is in)
   public static Map<String, Integer> df_matrix = new HashMap<String, Integer>();
 
-  //Hashmap of (document # : (term:weight))
+  //Document vectors -- Hashmap of (document # : (term:weight))
   public static Map<Integer, Map<String, Double>> doc_vectors = new HashMap<Integer,Map<String, Double>>();
 
-  //Query vector
+  //Query vector of (term:weight) pairs
   public static Map<String,Double> query_vector = new HashMap<String, Double>();
 
   //all vocab words in the search results
   public static List<String> vocabulary = new LinkedList<String>();
 
+  //Set of stopwords
   public static Set<String> stopwords = new HashSet<String>();
+
 
   public static void main( String[] args )throws Exception
   {
@@ -44,35 +45,32 @@ public class IR_model
     System.out.println("Enter a precision: ");
     Double precision = scan.nextDouble();
 
-    //String engine_ID = System.getenv("G_ENGINE_ID");
-    //String api_Key = System.getenv("G_API_KEY");
-
-    stopwords = getStopWords("proj1-stop.txt");
-
+    //parsing command line arguments for ID and key
     if(args.length < 2){
       System.out.println("Not enough arguments!");
       System.exit(1);
     }
     String engine_ID = args[1];
-    String api_Key = args[0]; 
-    //if(args.length > 2){ precision = Double.parseDouble(args[2]); }
-    //if(args.length > 3){ query = args[3]; }
+    String api_Key = args[0];
 
     System.out.println("\nParameters:\nClient key  = " + api_Key+"\nEngine key  = " + engine_ID + "\nQuery       = "
                         + query + "\nPrecision   = "+ precision + "\nGoogle Search Results:\n======================\n");
 
+    stopwords = getStopWords("proj1-stop.txt");
+
     //querying loop
     while(true){
-      System.out.println(query);
+      System.out.println("Query is: " + query);
 
+      //get search results and fill in df_matrix and count_matrix
       JSONObject results = getSearchResults(api_Key,engine_ID,query);
       generateFrequencyMatrices(query,results);
-      //System.out.println(df_matrix);
 
+      //vectorizing documents and query
       vectorizeDocuments(results);
       vectorizeQuery(query);
 
-
+      //Getting relevant documents and calculating precision
       Map<ArrayList,Double> precision_indices = getPrecision(results);
       ArrayList rel_doc_indices =  new ArrayList<Integer>();
       Double curr_precision = 0.0;
@@ -81,21 +79,19 @@ public class IR_model
         curr_precision = precision_indices.get(x);
       }
 
-      //stop program if reached desired precision
+      //stopping program if reached desired precision
       if (curr_precision >= precision){
         System.out.println("\nGoogle Search Results:\n======================\n"+"\nFEEDBACK SUMMARY\nQuery: " + query+"\nPrecision: " + curr_precision + "\nDesired precision reached, done\n");
         System.exit(1);
       }
 
-      //reweight query vector given set of relevant docs
+      //reweighting query vector given set of relevant docs
       Map<String,Double> new_query_vector = calculateNewQuery(rel_doc_indices);
 
-      //retrieve new words based on reweighted query vector, reorder query terms
+      //retrieving new words based on reweighted query vector, reorder query terms
       String new_query = deriveNewWords(query,new_query_vector);
-      //System.out.println(new_query);
       query = new_query;
-  }
-
+    }
   }
 
 
@@ -145,12 +141,12 @@ public class IR_model
     return stopwords;
   }
 
-
+  //Fill in count_matrix and df_matrix given query and Google results.
   public static void generateFrequencyMatrices(String query, JSONObject results){
     try{
       JSONArray items = results.getJSONArray("items");
       Set<String> query_w = new HashSet<String>(Arrays.asList(query.replaceAll("[^a-zA-Z ]", "").toLowerCase().split("\\s+")));
-      //String[] query_w = query.replaceAll("[^a-zA-Z ]", "").toLowerCase().split("\\s+");
+
       //terminate program if less than 10 results
       if (items.length()<10){
         System.out.println("Less than 10 results returned. End");
@@ -190,6 +186,7 @@ public class IR_model
         }
         count_matrix.put(i, term_frequencies);
       }
+
       //filling in df_matrix
       for (String vocab : vocabulary){
         Integer num_docs = 0;
@@ -207,12 +204,15 @@ public class IR_model
   }
 
 
+  //Vectorize documents by calculating weights for each word in the vocabulary.
+  //Fills in doc_vectors.
   public static void vectorizeDocuments(JSONObject results){
     JSONArray items = results.getJSONArray("items");
-    //printResult(items, 0);
-    for (int i=0;i<items.length(); i++){ //iterating through docs
+    //iterating through docs
+    for (int i=0;i<items.length(); i++){
       Map<String,Double> term_tf_idf = new HashMap<String, Double>();
       Double denom = norm_term(i);
+      //calculating weight for each word in vocabulary for document vector i.
       for (String vocab : vocabulary){
         if (count_matrix.get(i).containsKey(vocab)){
           Double tf_idf = calculate_weight(i, vocab);
@@ -227,12 +227,13 @@ public class IR_model
   }
 
 
+  //Vectorize query by calculating weights and fill in query_vector
   public static void vectorizeQuery(String query){
     String lw_query = query.replaceAll("[^a-zA-Z0-9 ]", "").toLowerCase();
-    //System.out.println(lw_query);
     String[] query_words = lw_query.split(" ");
     Map<String,Integer> word_count = new HashMap<String, Integer>();
     Double sum = 0.0;
+    //normalizing denominator
     for (String w1 : query_words){
       int num = 0;
       for (String w2 : query_words){
@@ -245,6 +246,7 @@ public class IR_model
         sum += Math.pow((Math.log(num)+1.0)*(Math.log(10.0/df_matrix.get(w1))),2);
       }
     }
+    //calculating tf-idf as the numerator
     for (String word : word_count.keySet()){
       Double tf_idf = (Math.log(word_count.get(word))+1.0)*(Math.log(10.0/df_matrix.get(word)));
       query_vector.put(word,tf_idf/Math.sqrt(sum));
@@ -252,6 +254,7 @@ public class IR_model
   }
 
 
+  //Calculate the norm term for a given document in the returned results.
   public static Double norm_term(Integer doc_id){
     Double sum = 0.0;
     Map<String, Integer> doc_term_count = count_matrix.get(doc_id);
@@ -266,8 +269,10 @@ public class IR_model
   }
 
 
+  //Calculate the unnormalized weight for a term in a given document.
+  //The weight becomes an entry in the document's vector.
   public static Double calculate_weight(Integer doc_id, String term){
-    //Compute term frequency
+    //Compute term frequency in the document
     Map<String, Integer> doc_term_count = count_matrix.get(doc_id);
     int f_ik = 0;
     if (doc_term_count.containsKey(term)){
@@ -293,7 +298,7 @@ public class IR_model
               Scanner scn = new Scanner(System.in);
               System.out.println("Relevant? [Y/N]");
               String relevance = scn.nextLine().trim();
-              while(relevance.equals("Y") && relevance.equals("N")){
+              while(!relevance.equals("Y") && !relevance.equals("N")){
                   System.out.println(relevance);
                   System.out.println("Incorrect input. Relevant? [Y/N]");
                   relevance = scn.nextLine();
@@ -315,7 +320,7 @@ public class IR_model
       }catch(Exception e){
           e.printStackTrace();
       }
-      System.out.println(precision);
+      System.out.println("Precision is: " + precision);
       Map<ArrayList,Double> precision_indices = new HashMap<ArrayList,Double>();
       precision_indices.put(relevant_indices,precision);
       return precision_indices;
@@ -346,14 +351,12 @@ public class IR_model
 
   //calculates new query vector using Rocchio's.
   public static Map<String,Double> calculateNewQuery(ArrayList rel_indices){
-    //System.out.println(rel_indices);
     ArrayList irrel_indices = new ArrayList<Integer>();
     for (int i = 0; i<10; i++){
       if (!rel_indices.contains(i)){
         irrel_indices.add(i);
       }
     }
-    //System.out.println(irrel_indices);
 
     Double alpha = 1.0;
     Double beta = 1.0;
@@ -386,54 +389,59 @@ public class IR_model
   }
 
 
-  //Get the weights with topmost frequency add them to query.
   public static String deriveNewWords(String query, Map<String,Double> query_vector){
     String[] query_words_list = query.split(" ");
+    List<String> query_tokens = new ArrayList<String>();
     Map<String,Double> query_words = new HashMap<String, Double>();
-    //List<String> query_words = new ArrayList<String>();
+    //add words from current query to hashmap.
     int num = query_words_list.length;
-        for (int i=0; i<num; i++)
-        {
-            String w = query_words_list[i];
-            //query_words.add(w);
-            query_words.put(w,query_vector.get(w.replaceAll("[^a-zA-Z0-9 ]", "").toLowerCase()));
-        }
-    System.out.println(query_words);
+      for (int i=0; i<num; i++){
+        String w = query_words_list[i];
+        query_tokens.add(w);
+      }
+
+    //find 2 words not in current query with highest weights
     Double highest = Double.MIN_VALUE;
     String highest_word = null;
     Double highest2 = Double.MIN_VALUE;
     String highest_word2 = null;
     for (String word: query_vector.keySet()){
       Double value = query_vector.get(word);
-      if (highest <= value && !query_words.containsKey(word)){
+      if (highest <= value && !query_tokens.contains(word)){
         highest2 = highest;
         highest_word2 = highest_word;
         highest = value;
         highest_word = word;
       }
-      else if (highest2 <= value && !query_words.containsKey(word)){
+      else if (highest2 <= value && !query_tokens.contains(word)){
         highest2 = value;
         highest_word2 = word;
       }
     }
+    //add new words to hashmap.
     query_words.put(highest_word,highest);
-    //query_words.add(highest_word);
     query_words.put(highest_word2,highest2);
-    //query_words.add(highest_word2);
 
+    //add previous words to new query
     query_words = sortByValue(query_words);
     StringBuffer sb = new StringBuffer();
-      for (Map.Entry<String, Double> en : query_words.entrySet()) {
-        //System.out.println(en.getKey() + en.getValue());
-        sb.append(en.getKey());
-        sb.append(" ");
-      }
+    for (String s : query_tokens) {
+       sb.append(s);
+       sb.append(" ");
+    }
+    //add new words in descending order according to their weights
+    for (Map.Entry<String, Double> en : query_words.entrySet()) {
+      //System.out.println(en.getKey() + en.getValue());
+      sb.append(en.getKey());
+      sb.append(" ");
+    }
     String query_string = sb.toString();
     return query_string;
   }
 
 
-  // function to sort hashmap by values. Taken from https://www.geeksforgeeks.org/sorting-a-hashmap-according-to-values/
+  // function to sort hashmap by values in descending order.
+  //Taken from https://www.geeksforgeeks.org/sorting-a-hashmap-according-to-values/
   public static HashMap<String, Double> sortByValue(Map<String, Double> hm){
     // Create a list from elements of HashMap
     List<Map.Entry<String, Double> > list = new LinkedList<Map.Entry<String, Double> >(hm.entrySet());
@@ -441,7 +449,7 @@ public class IR_model
     // Sort the list
     Collections.sort(list, new Comparator<Map.Entry<String, Double> >() {
       public int compare(Map.Entry<String, Double> o1, Map.Entry<String, Double> o2){
-        return (o1.getValue()).compareTo(o2.getValue());
+        return (o2.getValue()).compareTo(o1.getValue());
       }
     });
 
