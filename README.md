@@ -8,6 +8,6 @@ Easier to keep the json-20140107.jar file in the same folder as the IR_model cla
 Then follow instructions below to compile and run.
 
 ### To Compile and Run
-./project1 <ApiKey> <Google_Engine_ID>
+./project1 {ApiKey} {Google_Engine_ID}
   
 make sure the permissions are set correctly for the bash script 
